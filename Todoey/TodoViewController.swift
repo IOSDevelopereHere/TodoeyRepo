@@ -10,7 +10,9 @@ import UIKit
 
 class TodoViewController: UITableViewController {
 
-    let itemArray = ["Find Mac","Buy Eggs","Destroy Demogrogon"]
+    var itemArray = ["Find Mac","Buy Eggs","Destroy Demogrogon"]
+    
+    let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,6 +41,32 @@ class TodoViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
+    
+    //  MARK:- BUTTON ACTIONS
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
+        var textField = UITextField()
+        
+        let alert = UIAlertController(title: "Add New Todey Item", message: "", preferredStyle: UIAlertController.Style.alert)
+        
+        let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            //  todo
+            self.itemArray.append(textField.text == "" ? "A Dummy Text" : textField.text!)
+            
+            self.defaults.set(self.itemArray, forKey: "itemsArray")
+            
+            self.tableView.reloadData()
+        }
+        
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create New Item"
+            textField = alertTextField
+        }
+        
+        alert.addAction(action)
+        self.present(alert, animated: true, completion: nil)
+        
+    }
     
 
 }
