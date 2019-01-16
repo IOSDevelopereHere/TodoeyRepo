@@ -10,13 +10,27 @@ import UIKit
 
 class TodoViewController: UITableViewController {
 
-    var itemArray = ["Find Mac","Buy Eggs","Destroy Demogrogon"]
+    var itemArray = [item]()
     
     let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        
+        let item1 = item()
+        item1.title = "Find Mac"
+        itemArray.append(item1)
+        
+        let item2 = item()
+        item2.title = "Buy Eggs"
+        itemArray.append(item2)
+        
+        let item3 = item()
+        item3.title = "Destroy Demogrogon"
+        itemArray.append(item3)
+        
+       
+        
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -26,18 +40,15 @@ class TodoViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = itemArray[indexPath.row]
-        cell.accessoryType = .checkmark
+        cell.textLabel?.text = itemArray[indexPath.row].title
+        cell.accessoryType = itemArray[indexPath.row].done ? .checkmark : .none
         return cell
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }else{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -51,8 +62,11 @@ class TodoViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //  todo
-            self.itemArray.append(textField.text == "" ? "A Dummy Text" : textField.text!)
             
+            let newitem = item()
+            newitem.title = textField.text!
+            
+            self.itemArray.append(newitem)
             self.defaults.set(self.itemArray, forKey: "itemsArray")
             
             self.tableView.reloadData()
