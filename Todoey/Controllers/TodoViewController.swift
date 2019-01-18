@@ -12,24 +12,13 @@ class TodoViewController: UITableViewController {
 
     var itemArray = [item]()
     
-    let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("items.plist")
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let item1 = item()
-        item1.title = "Find Mac"
-        itemArray.append(item1)
         
-        let item2 = item()
-        item2.title = "Buy Eggs"
-        itemArray.append(item2)
-        
-        let item3 = item()
-        item3.title = "Destroy Demogrogon"
-        itemArray.append(item3)
-        
-       
+        self.loadItems()
         
     }
 
@@ -48,6 +37,7 @@ class TodoViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+        saveData()
         tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -67,7 +57,8 @@ class TodoViewController: UITableViewController {
             newitem.title = textField.text!
             
             self.itemArray.append(newitem)
-            self.defaults.set(self.itemArray, forKey: "itemsArray")
+            
+            self.saveData()
             
             self.tableView.reloadData()
         }
@@ -82,6 +73,28 @@ class TodoViewController: UITableViewController {
         
     }
     
+    
+    func loadItems()  {
+        if let data = try? Data(contentsOf: self.dataFilePath!){
+            let decoder = PropertyListDecoder()
+            do{
+            itemArray = try decoder.decode([item].self, from: data)
+            }catch{
+                print("Error Decoding")
+            }
+        }
+    }
 
+    func saveData() {
+        let encoder = PropertyListEncoder()
+        do{
+            let data = try encoder.encode(self.itemArray)
+            try data.write(to: self.dataFilePath!)
+        }
+        catch(let error){
+            print(error.localizedDescription)
+        }
+    }
+    
 }
 
