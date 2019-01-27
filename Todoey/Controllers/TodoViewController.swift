@@ -8,12 +8,14 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 class TodoViewController: UITableViewController {
 
     @IBOutlet weak var mySearchBar: UISearchBar!
     
-    var itemArray = [Item]()
+    var todoItems: Results<Item>?
+    let realm = try! Realm()
     
     var selectedCategory: Category? {
         didSet{
@@ -29,7 +31,7 @@ class TodoViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        
+        mySearchBar.delegate = self
      //   print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
       //  self.loadItems()
@@ -37,27 +39,56 @@ class TodoViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return todoItems?.count ?? 0
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = itemArray[indexPath.row].title
-        cell.accessoryType = itemArray[indexPath.row].done ? .checkmark : .none
+        
+        if let item = todoItems?[indexPath.row]{
+            cell.textLabel?.text = item.title
+            cell.accessoryType = item.done ? .checkmark : .none
+        }
+        else{
+            cell.textLabel?.text = "Nothing to show"
+            cell.accessoryType = .none
+        }
+        
+        
         return cell
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        if let item = todoItems?[indexPath.row]{
+            do{
+                try realm.write {
+                    item.done = !item.done
+                    
+                    DispatchQueue.main.async {
+                    tableView.reloadData()
+                    }
+                }
+            }
+            catch{
+                print("Couldnt Update data")
+            }
+        }
+        
+        
+        
+        
       //  itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        context.delete(itemArray[indexPath.row])
-        itemArray.remove(at: indexPath.row)
+     //   context.delete(itemArray[indexPath.row])
+      //  itemArray.remove(at: indexPath.row)
         
-        saveData()
-        tableView.reloadData()
-        tableView.deselectRow(at: indexPath, animated: true)
+     //   saveData()
+        
+        
     }
     
     
@@ -72,16 +103,19 @@ class TodoViewController: UITableViewController {
             //  todo
             
             
+            guard let selectedCategory = self.selectedCategory else{return}
             
-            let newitem = Item(context: self.context)
-            newitem.title = textField.text!
-            newitem.done = false
-            newitem.parentCategory = self.selectedCategory
-            
-            self.itemArray.append(newitem)
-            
-            self.saveData()
-            
+            do{
+                try self.realm.write {
+                    let newitem = Item()
+                    newitem.title = textField.text!
+                    newitem.done = false
+                    selectedCategory.items.append(newitem)
+                }
+            }
+            catch{
+                print("couldn't set the value for category")
+            }
             self.tableView.reloadData()
         }
         
@@ -95,19 +129,27 @@ class TodoViewController: UITableViewController {
         
     }
     
-    //  using coredata
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()){
-        
-        let predicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-        request.predicate = predicate
-        do{
-            itemArray = try context.fetch(request)
+    
+
+        //  using realm
+        func loadItems(){
+            self.todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+            self.tableView.reloadData()
         }
-        catch{
-            print("Error fetching data from context \(error)")
-        }
-        tableView.reloadData()
-    }
+    
+//    //  using coredata
+//    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()){
+//
+//        let predicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+//        request.predicate = predicate
+//        do{
+//            itemArray = try context.fetch(request)
+//        }
+//        catch{
+//            print("Error fetching data from context \(error)")
+//        }
+//        tableView.reloadData()
+//    }
     
     //  using nsdecoder
 //    func loadItems()  {
@@ -121,9 +163,11 @@ class TodoViewController: UITableViewController {
 //        }
 //    }
 
-    func saveData() {
+    func saveData(item: Item) {
         do{
-            try context.save()
+            try realm.write {
+                realm.add(item)
+            }
         }
         catch{
             print("Error Saving Item Array.")
@@ -136,31 +180,38 @@ class TodoViewController: UITableViewController {
 
 //  MARK:- UISearchBarDelegate
 extension TodoViewController:UISearchBarDelegate{
-    
+
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
-        //  creating a fetch request
-        let req: NSFetchRequest<Item> = Item.fetchRequest()
         
-        //  creating a predicate/ pattern to search data
-        req.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        todoItems = todoItems?.filter(NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!))
+        tableView.reloadData()
+        
+     //   loadItems()
         
         
-        req.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        loadItems(with: req)
+//        //  creating a fetch request
+//        let req: NSFetchRequest<Item> = Item.fetchRequest()
+//
+//        //  creating a predicate/ pattern to search data
+//        req.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+//
+//
+//        req.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+//        loadItems(with: req)
     }
-    
-    
+
+
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchText.count == 0{
-        
+
             loadItems()
-            
+
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
-            
+
         }
     }
-    
+
 }
